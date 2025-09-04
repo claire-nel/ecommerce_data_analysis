@@ -1,0 +1,121 @@
+--creating total sales by category
+CREATE TABLE total_sales_by_category AS
+SELECT df_Products.product_category_name AS category,
+       SUM(df_OrderItems.price) AS total_sales
+FROM df_Products
+JOIN df_OrderItems
+  ON df_Products.product_id = df_OrderItems.product_id
+GROUP BY category
+ORDER BY total_sales DESC;
+
+ -- converting new column's datatype to real 
+ALTER TABLE total_sales_by_category ADD COLUMN total_sales_real REAL;
+UPDATE total_sales_by_category
+SET total_sales_real = CAST(total_sales AS REAL);
+SELECT * FROM total_sales_by_category;
+ALTER TABLE total_sales_by_category
+DROP COLUMN total_sales;
+
+--creating new table to analyze sales as a function of installments
+CREATE TABLE average_payment_by_installment AS 
+SELECT payment_installments, payment_value, round(avg(payment_value*payment_installments)) as average_total_payment_by_installment_amount
+FROM df_Payments
+GROUP BY payment_installments
+ORDER BY average_total_payment_by_installment_amount DESC;
+
+-- temporarily created this table that enabled me to manually test calculations ensure subsequent table was operating as expected  
+SELECT payment_installments, payment_value, payment_value*payment_installments
+FROM df_Payments
+ORDER BY payment_installments
+
+--converting a column's datatype to real
+ALTER TABLE average_payment_by_installment ADD COLUMN average_total_payment_by_installment_amount_real REAL;
+UPDATE average_total_payment_by_installment_amount_real
+SET average_total_payment_by_installment_amount_real = CAST(average_total_payment_by_installment_amount AS REAL);
+ALTER TABLE average_payment_by_installment
+DROP COLUMN average_total_payment_by_installment_amount;
+
+-- creating a table to identify top customers
+CREATE TABLE top_customers AS
+SELECT df_Orders.customer_id, df_Payments.payment_value*df_Payments.payment_installments as payment
+FROM df_Orders
+JOIN df_Payments
+WHERE df_Orders.order_id == df_Payments.order_id
+GROUP BY customer_id
+ORDER BY payment DESC;
+
+--creating table with monthly sales data
+CREATE TABLE monthly_sales AS
+SELECT strftime('%m', df_Orders.order_purchase_timestamp) AS month, sum(df_Payments.payment_value) as sales
+FROM df_Orders
+JOIN df_Payments
+WHERE df_Orders.order_id == df_Payments.order_id
+GROUP BY month;
+
+--converting column's data to datetime
+ALTER TABLE monthly_sales ADD COLUMN month_datetime DATETIME;
+UPDATE monthly_sales
+SET month_datetime = CAST(month AS DATETIME);
+ALTER TABLE monthly_sales
+DROP COLUMN month;
+
+--converting column to real
+ALTER TABLE monthly_sales ADD COLUMN sales_real REAL;
+UPDATE monthly_sales
+SET sales_real = CAST(sales AS REAL);
+ALTER TABLE monthly_sales
+DROP COLUMN sales;
+
+--creating a customer signature that groups customers by times they're most likely to make a purchase 
+CREATE TABLE customer_signature AS
+SELECT customer_id, order_id, strftime('%H', order_purchase_timestamp) AS military_hour,
+    CASE
+	WHEN strftime('%H', order_purchase_timestamp) >= 9 AND strftime('%H', order_purchase_timestamp) <= 17 THEN 'Business Day'
+    WHEN strftime('%H', order_purchase_timestamp) > 17 THEN 'Evening'
+    WHEN strftime('%H', order_purchase_timestamp) < 9 THEN 'Morning'
+   END AS 'time_of_day'
+FROM df_Orders
+
+--debugging the above query
+SELECT customer_id, order_id, strftime('%H', order_purchase_timestamp) AS military_hour,
+    CASE
+	WHEN CAST(strftime('%H', order_purchase_timestamp) AS INTEGER) >= 9 AND CAST(strftime('%H', order_purchase_timestamp) AS INTEGER) <= 17 THEN 'Business Day'
+    WHEN CAST(strftime('%H', order_purchase_timestamp) AS INTEGER) > 17 THEN 'Evening'
+    WHEN CAST(strftime('%H', order_purchase_timestamp) AS INTEGER) < 9 THEN 'Morning'
+   END AS 'time_of_day'
+FROM df_Orders
+
+--converting hour column to datetime
+ALTER TABLE customer_signature_updated ADD COLUMN military_hour_datetime DATETIME;
+UPDATE customer_signature_updated
+SET military_hour_datetime = CAST(military_hour AS REAL);
+ALTER TABLE customer_signature_updated
+DROP COLUMN military_hour;
+
+--converting time of day column to text
+ALTER TABLE customer_signature_updated ADD COLUMN time_of_day_text TEXT;
+UPDATE customer_signature_updated
+SET time_of_day_text = CAST(time_of_day AS TEXT);
+ALTER TABLE customer_signature_updated
+DROP COLUMN time_of_day;
+
+--deleting old table
+DROP TABLE customer_signature;
+
+--creating table with sales by time of day
+CREATE TABLE sales_by_time_of_day AS
+SELECT customer_signature_updated.time_of_day_text, sum(df_payments.payment_value) AS Sales
+FROM customer_signature_updated
+JOIN df_payments
+ON customer_signature_updated.order_id == df_payments.order_id
+GROUP BY customer_signature_updated.time_of_day_text
+
+--converting sales column to real
+ALTER TABLE sales_by_time_of_day ADD COLUMN sales_real REAL;
+UPDATE sales_by_time_of_day
+SET sales_real = CAST(sales AS REAL);
+ALTER TABLE sales_by_time_of_day
+DROP COLUMN sales;
+
+
+*/
