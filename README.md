@@ -1,2 +1,2 @@
 # ecommerce_data_analysis
-Analyzing e-commerce sales with SQL: track revenue by category, customer habits, payment behavior, and time-segmentation. Includes data type conversions, debug queries, and clean aggregation logic. Ideal for marketing insights, customer segmentation, and seasonal planning.
+In this project I analyzed e-commerce sales with SQL. I created a data pipeline that tracks revenue by category, customer habits, payment behavior, and time-segmentation. Includes data type conversions, debug queries, and clean aggregation logic. I then visualized the data using the python libraries Matplotlib and Seaborn.
